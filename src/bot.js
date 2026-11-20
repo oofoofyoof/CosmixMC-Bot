@@ -29,6 +29,7 @@ import {
   pickGiveawayWinners,
   saveGiveaways,
 } from "./giveaway-store.js";
+import { createHelpEmbed } from "./help.js";
 import {
   getReactionKey,
   loadReactionRoles,
@@ -1015,7 +1016,9 @@ async function handlePrefixMessage(message, inviteData, ticketConfigs, giveaways
   const command = parsePrefixCommand(message.content);
   if (!command) return ticketConfigs;
 
-  if (["ticketpost", "ticket-post"].includes(command.name)) {
+  if (command.name === "help") {
+    await message.reply({ embeds: [createHelpEmbed()] });
+  } else if (["ticketpost", "ticket-post"].includes(command.name)) {
     await postTicketPanel(message);
   } else if (["ticketconfig", "ticket-config"].includes(command.name)) {
     return await handlePrefixTicketConfig(message, command.args, ticketConfigs);
@@ -1390,7 +1393,9 @@ export async function startBot() {
 
   client.on("interactionCreate", async (interaction) => {
     try {
-      if (interaction.isChatInputCommand() && interaction.commandName === "ticket-post") {
+      if (interaction.isChatInputCommand() && interaction.commandName === "help") {
+        await interaction.reply({ embeds: [createHelpEmbed()], ephemeral: true });
+      } else if (interaction.isChatInputCommand() && interaction.commandName === "ticket-post") {
         if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)) {
           await interaction.reply({ content: "You need the Manage Channels permission to post a ticket panel.", ephemeral: true });
           return;

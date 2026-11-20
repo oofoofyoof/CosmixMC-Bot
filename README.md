@@ -14,6 +14,7 @@ A Discord.js bot with moderation, invite tracking, and private support tickets.
 
 All prefix commands accept `.`, `-`, or `_`:
 
+- `/help` or `help` — show the available slash and prefix commands.
 - `mute @member 10m [reason]` — timeout a member (up to 28 days; supports `s`, `m`, `h`, `d`, and `w`).
 - `kick @member [reason]`
 - `ban @member [reason]`

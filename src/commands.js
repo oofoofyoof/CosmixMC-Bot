@@ -2,6 +2,10 @@ import { ChannelType, PermissionFlagsBits, SlashCommandBuilder } from "discord.j
 
 export const slashCommands = [
   new SlashCommandBuilder()
+    .setName("help")
+    .setDescription("Show the bot's commands.")
+    .toJSON(),
+  new SlashCommandBuilder()
     .setName("ticket-config")
     .setDescription("Configure the ticket category and staff role for this server.")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)

@@ -7,6 +7,8 @@ import {
   updateTicketConfig,
 } from "../src/ticket-config.js";
 import { parseGiveawayDuration, pickGiveawayWinners } from "../src/giveaway-store.js";
+import { createHelpEmbed } from "../src/help.js";
+import { slashCommands } from "../src/commands.js";
 import {
   ensureApplication,
   ensureGuildApplications,
@@ -14,7 +16,6 @@ import {
   normalizeApplicationName,
 } from "../src/application-store.js";
 import { getReactionKey, setReactionRole } from "../src/reaction-role-store.js";
-import { slashCommands } from "../src/commands.js";
 
 test("parses supported timeout durations and enforces Discord's limit", () => {
   assert.equal(parseDuration("10m"), 10 * 60 * 1000);
@@ -79,6 +80,19 @@ test("validates giveaway durations and draws unique winners", () => {
   assert.equal(new Set(winners).size, 2);
   assert.ok(winners.every((winner) => ["a", "b", "c"].includes(winner)));
   assert.deepEqual(pickGiveawayWinners(["only-entry"], 3), ["only-entry"]);
+});
+
+test("help output lists registered slash commands and prefix-only commands", () => {
+  const help = createHelpEmbed().toJSON();
+  const slashField = help.fields.find(({ name }) => name === "Slash commands");
+  assert.ok(slashCommands.some(({ name }) => name === "help"));
+  for (const { name } of slashCommands) {
+    assert.ok(slashField.value.includes(`/${name}`), `help should include /${name}`);
+  }
+  const prefixFields = help.fields.map(({ value }) => value).join("\n");
+  for (const command of ["mute", "kick", "ban", "invites", "ticketconfig", "giveaway", "reactionroles", "applicationpost"]) {
+    assert.ok(prefixFields.includes(command), `help should include ${command}`);
+  }
 });
 
 test("reaction-role mappings persist emoji-to-role associations without overwriting", () => {
