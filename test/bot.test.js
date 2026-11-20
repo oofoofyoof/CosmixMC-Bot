@@ -7,6 +7,14 @@ import {
   updateTicketConfig,
 } from "../src/ticket-config.js";
 import { parseGiveawayDuration, pickGiveawayWinners } from "../src/giveaway-store.js";
+import {
+  ensureApplication,
+  ensureGuildApplications,
+  getApplicationKey,
+  normalizeApplicationName,
+} from "../src/application-store.js";
+import { getReactionKey, setReactionRole } from "../src/reaction-role-store.js";
+import { slashCommands } from "../src/commands.js";
 
 test("parses supported timeout durations and enforces Discord's limit", () => {
   assert.equal(parseDuration("10m"), 10 * 60 * 1000);
@@ -71,4 +79,43 @@ test("validates giveaway durations and draws unique winners", () => {
   assert.equal(new Set(winners).size, 2);
   assert.ok(winners.every((winner) => ["a", "b", "c"].includes(winner)));
   assert.deepEqual(pickGiveawayWinners(["only-entry"], 3), ["only-entry"]);
+});
+
+test("reaction-role mappings persist emoji-to-role associations without overwriting", () => {
+  const first = setReactionRole({}, "guild", "channel", "message", "🎉", "role-a");
+  const second = setReactionRole(first, "guild", "channel", "message", "✨", "role-b");
+  assert.deepEqual(second.guild.message.roles, { "🎉": "role-a", "✨": "role-b" });
+  assert.equal(getReactionKey({ id: "emoji-id", name: "custom" }), "emoji-id");
+  assert.throws(
+    () => setReactionRole(second, "guild", "channel", "message", "🎉", "role-c"),
+    /already has a role/,
+  );
+  assert.throws(
+    () => setReactionRole(second, "guild", "another-channel", "message", "⭐", "role-c"),
+    /different channel/,
+  );
+});
+
+test("application setup normalizes names and keeps guild definitions separate", () => {
+  assert.equal(normalizeApplicationName("  Helper   Team "), "helper team");
+  assert.equal(getApplicationKey("Helper Team"), "helper-team");
+  const first = ensureApplication({}, "guild-a", "helper-team", {
+    name: "Helper Team",
+    questions: ["Why?"],
+    roleIds: [],
+  });
+  const second = ensureGuildApplications(first, "guild-b");
+  assert.equal(second.guilds["guild-a"].applications["helper-team"].name, "Helper Team");
+  assert.deepEqual(second.guilds["guild-b"].applications, {});
+});
+
+test("registers requested reaction-role and application slash command aliases", () => {
+  const names = new Set(slashCommands.map((command) => command.name));
+  for (const name of ["reactionroles", "rr", "reactionadd", "ra", "applyadd", "aa", "applicationrole", "ar", "applicationchannel", "ac", "applicationpost", "ap"]) {
+    assert.ok(names.has(name), `missing /${name}`);
+  }
+  const reactionAdd = slashCommands.find((command) => command.name === "ra");
+  assert.deepEqual(reactionAdd.options.map((option) => option.name), ["message-id", "emoji", "role"]);
+  const applicationRole = slashCommands.find((command) => command.name === "ar");
+  assert.deepEqual(applicationRole.options.map((option) => option.name), ["role", "application"]);
 });
